@@ -15,6 +15,14 @@ class Code:
         return {"system": self.system, "code": self.code, "display": self.display}
 
 
+def _as_code(c):
+    return c if isinstance(c, Code) else Code(**c)
+
+
+def _normalize_codes(codes):
+    return [_as_code(c) for c in codes] if codes else codes
+
+
 class _ClinicalState:
     """
     Shared plumbing for the 5 clinical state types. Not a dataclass itself -
@@ -51,7 +59,7 @@ class _ClinicalState:
         return dict(self.transition[self.name])
 
 
-@dataclass(kw_only=True)
+@dataclass
 class ConditionOnset(_ClinicalState):
     state_type = "ConditionOnset"
 
@@ -61,6 +69,9 @@ class ConditionOnset(_ClinicalState):
     assign_to_attribute: Optional[str] = None
     remarks: Optional[list[str]] = None
     transition: Optional[dict] = None
+
+    def __post_init__(self):
+        self.codes = _normalize_codes(self.codes)
 
     def to_dict(self):
         d = self._start_dict()
@@ -84,7 +95,7 @@ class ConditionOnset(_ClinicalState):
         return errors
 
 
-@dataclass(kw_only=True)
+@dataclass
 class ConditionEnd(_ClinicalState):
     state_type = "ConditionEnd"
 
@@ -94,6 +105,9 @@ class ConditionEnd(_ClinicalState):
     referenced_by_attribute: Optional[str] = None
     remarks: Optional[list[str]] = None
     transition: Optional[dict] = None
+
+    def __post_init__(self):
+        self.codes = _normalize_codes(self.codes)
 
     def to_dict(self):
         d = self._start_dict()
@@ -116,7 +130,7 @@ class ConditionEnd(_ClinicalState):
 VALID_ENCOUNTER_CLASSES = {"ambulatory", "emergency", "inpatient", "wellness", "urgentcare", "outpatient", "virtual"}
 
 
-@dataclass(kw_only=True)
+@dataclass
 class Encounter(_ClinicalState):
     state_type = "Encounter"
 
@@ -127,6 +141,9 @@ class Encounter(_ClinicalState):
     wellness: bool = False
     remarks: Optional[list[str]] = None
     transition: Optional[dict] = None
+
+    def __post_init__(self):
+        self.codes = _normalize_codes(self.codes)
 
     def to_dict(self):
         d = self._start_dict()
@@ -150,7 +167,7 @@ class Encounter(_ClinicalState):
         return errors
 
 
-@dataclass(kw_only=True)
+@dataclass
 class EncounterEnd(_ClinicalState):
     state_type = "EncounterEnd"
 
@@ -158,6 +175,10 @@ class EncounterEnd(_ClinicalState):
     discharge_disposition: Optional[Code] = None
     remarks: Optional[list[str]] = None
     transition: Optional[dict] = None
+
+    def __post_init__(self):
+        if self.discharge_disposition is not None:
+            self.discharge_disposition = _as_code(self.discharge_disposition)
 
     def to_dict(self):
         d = self._start_dict()
@@ -171,7 +192,7 @@ class EncounterEnd(_ClinicalState):
         return []
 
 
-@dataclass(kw_only=True)
+@dataclass
 class Procedure(_ClinicalState):
     state_type = "Procedure"
 
@@ -183,6 +204,9 @@ class Procedure(_ClinicalState):
     duration_unit: str = "minutes"
     remarks: Optional[list[str]] = None
     transition: Optional[dict] = None
+
+    def __post_init__(self):
+        self.codes = _normalize_codes(self.codes)
 
     def to_dict(self):
         d = self._start_dict()
